@@ -8,8 +8,8 @@ import pandas as pd
 # 환경변수 또는 secrets.toml에 저장 권장
 CLIENT_ID = st.secrets["GOOGLE_n8n"]["CLIENT_ID"]
 CLIENT_SECRET = st.secrets["GOOGLE_n8n"]["CLIENT_SECRET"]
-#REDIRECT_URI = "http://localhost:8501/oauth2callback"
-REDIRECT_URI = r"https://knuibec.streamlit.app/oauth2callback"
+REDIRECT_URI = r"http://localhost:8501/oauth2callback"
+# REDIRECT_URI = r"https://knuibec.streamlit.app/oauth2callback"
 
 # Google OAuth2 설정
 oauth2 = OAuth2Component(
