@@ -9,7 +9,7 @@ import pandas as pd
 CLIENT_ID = st.secrets["GOOGLE_n8n"]["CLIENT_ID"]
 CLIENT_SECRET = st.secrets["GOOGLE_n8n"]["CLIENT_SECRET"]
 #REDIRECT_URI = "http://localhost:8501/oauth2callback"
-REDIRECT_URI = "https:/knuibec.streamlit.app/oauth2callback"
+REDIRECT_URI = "https://knuibec.streamlit.app/oauth2callback"
 
 # Google OAuth2 설정
 oauth2 = OAuth2Component(
