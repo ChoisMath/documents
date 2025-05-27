@@ -22,6 +22,12 @@ if user_role not in counseling_allowed_roles:
     st.info("상담일지 기능은 허용된 사용자만 접근할 수 있습니다. 필요 및 오류 시 관리자(혁쌤, complete860127@gmail.com)에게 문의하세요.")
 else:
     import datetime
+    # 상담일지 시트 열기
+    try:
+        counseling_ws = sh.worksheet("CounselingLog")
+    except Exception:
+        counseling_ws = sh.add_worksheet(title="CounselingLog", rows=1000, cols=10)
+        counseling_ws.append_row(["email", "date", "title", "content"])
 
     with st.form("counseling_form"):
         title = st.text_input("새로운 상담일지 제목")
@@ -33,12 +39,6 @@ else:
             st.success("상담일지가 저장되었습니다.")
             st.rerun()
 
-    # 상담일지 시트 열기
-    try:
-        counseling_ws = sh.worksheet("CounselingLog")
-    except Exception:
-        counseling_ws = sh.add_worksheet(title="CounselingLog", rows=1000, cols=10)
-        counseling_ws.append_row(["email", "date", "title", "content"])
     # 본인 상담일지 불러오기
     counseling_data = counseling_ws.get_all_records()
     counseling_df = pd.DataFrame(counseling_data)
