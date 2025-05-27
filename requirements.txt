@@ -11,3 +11,4 @@ pandas
 pillow
 requests
 streamlit
+Authlib

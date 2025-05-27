@@ -1,61 +1,22 @@
 import streamlit as st
-from streamlit_oauth import OAuth2Component
 import requests
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
+from datetime import datetime
 
-# 환경변수 또는 secrets.toml에 저장 권장
-CLIENT_ID = st.secrets["GOOGLE_n8n"]["CLIENT_ID"]
-CLIENT_SECRET = st.secrets["GOOGLE_n8n"]["CLIENT_SECRET"]
-REDIRECT_URI = r"http://localhost:8501/oauth2callback"
-# REDIRECT_URI = r"https://knuibec.streamlit.app/oauth2callback"
+st.set_page_config(layout="wide")
+st.title("Chois Playground")
+st.markdown("그냥 놀고있습니다. 급식정보가 제일 유용할까요? 필요하신 거 말씀하시면 되는대로 추가해 볼게요. 처음 로그인 하시면 등록하라고 나올꺼에요. 이름만 작성하셔서 등록눌러주시면 모두 보실 수 있게 해둘게요~ㅎㅎ")
 
-# Google OAuth2 설정
-oauth2 = OAuth2Component(
-    client_id=CLIENT_ID,
-    client_secret=CLIENT_SECRET,
-    authorize_endpoint="https://accounts.google.com/o/oauth2/v2/auth",
-    token_endpoint="https://oauth2.googleapis.com/token"
-)
-
-# 로그인 버튼
-if "user" not in st.session_state:
-    token = oauth2.authorize_button(
-        "Google로 로그인",
-        redirect_uri=REDIRECT_URI,
-        scope="openid email profile"
-    )
-    if token:
-        # access_token 추출
-        access_token = None
-        if isinstance(token, dict):
-            if "access_token" in token:
-                access_token = token["access_token"]
-            elif "token" in token and "access_token" in token["token"]:
-                access_token = token["token"]["access_token"]
-
-        if access_token:
-            userinfo_response = requests.get(
-                "https://openidconnect.googleapis.com/v1/userinfo",
-                headers={"Authorization": f"Bearer {access_token}"}
-            )
-            if userinfo_response.status_code == 200:
-                user_info = userinfo_response.json()
-                st.session_state["user"] = user_info
-               # Extract and display user's name
-                user_name = user_info.get('name', '')
-                st.session_state["user_name"] = user_name
-            else:
-                st.error("사용자 정보를 가져오지 못했습니다.")
-        else:
-            st.error("access_token이 없습니다.")
-    else:
-        st.warning("로그인 해주세요.")
+if not st.user.is_logged_in:
+    if st.button("Google로 로그인"):
+        st.login('google')
 else:
-    user_info = st.session_state["user"]
-    st.success(f"로그인됨: {st.session_state['user_name']}")
+    pass
 
+st.session_state["user"] = st.user.to_dict()
+#st.write(st.session_state["user"])
 
 # 구글 서비스 계정 인증 및 스프레드시트 열기
 SERVICE_ACCOUNT_INFO = st.secrets["google_service_account"]
@@ -65,14 +26,6 @@ gc = gspread.authorize(credentials)
 
 SHEET_ID = "1Bx4otXnVjpWONjlOMAecK4l-y3CAzxyNmH-O0mcQY0E"  # 실제 사용 중인 시트 ID로 맞추세요
 sh = gc.open_by_key(SHEET_ID)
-
-# 4. 데이터 읽기 (pandas DataFrame으로 변환)
-if "sheet_data" not in st.session_state:
-    data = sh.sheet1.get_all_records()
-    st.session_state["sheet_data"] = data
-else:
-    data = st.session_state["sheet_data"]
-df = pd.DataFrame(data)
 
 # board_roles 시트에서 읽기
 def load_board_roles(sh):
@@ -96,15 +49,29 @@ def save_board_roles(ws, board_roles):
     for board, roles in board_roles.items():
         ws.append_row([board, ",".join(roles)])
 
+# 등록 신청 시트 관리
+def load_registration(sh):
+    try:
+        ws = sh.worksheet("registration")
+    except gspread.exceptions.WorksheetNotFound:
+        ws = sh.add_worksheet(title="registration", rows=100, cols=5)
+        ws.append_row(["신청문구", "email", "name", "신청시간", "처리상태"])
+    return ws
+
+def save_registration_request(ws, request_text, email, name):
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ws.append_row([request_text, email, name, current_time, "대기중"])
+    return True
+
 # board_roles 불러오기
 board_roles, board_roles_ws = load_board_roles(sh)
 # Store board_roles in session_state for access across pages
 st.session_state['board_roles'] = board_roles
 
-# 5. 로그인한 사용자 이메일로 권한 확인
-
-if "user" in st.session_state:
+# # 5. 로그인한 사용자 이메일로 권한 확인
+if st.session_state["user"]["is_logged_in"]:
     user_email = st.session_state["user"]["email"]
+    df = pd.DataFrame(sh.worksheet("LoginList").get_all_records())
     user_row = df[df["email"] == user_email]
     if not user_row.empty:
         user_role = user_row.iloc[0]["role"]
@@ -112,34 +79,70 @@ if "user" in st.session_state:
         st.session_state["user_email"] = user_email
         # 프로필 사진, 이메일, 권한, 로그아웃 버튼
         col1, col2, col3, col4 = st.columns([1,3,3,2])
+        user_info = st.session_state["user"]
         with col1:
             if "picture" in user_info:
                 st.image(user_info["picture"], width=48)
         with col2:
-            st.markdown(f"**ID:** {user_info['email']}")
+            st.markdown(f"**ID:** {user_email}")
         with col3:
             st.markdown(f"**권한:** {user_role}")
         with col4:
-            if st.button("로그아웃"):
-                # Clear session state
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
-                st.rerun()
+            if st.button("Log out"):
+                st.logout()
     else:
         col1, col2 = st.columns([4,1])
-        col1.error(f"{user_email}은 등록되지 않은 사용자입니다. 관리자에게 문의하세요.")
+        col1.error(f"{user_email}은 등록되지 않은 사용자입니다.")
         if col2.button("로그아웃"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-        else:
-            pass
+            st.logout()
+        # 등록 신청 시트 불러오기
+        registration_ws = load_registration(sh)
+        
+        # 등록 신청 섹션
+        st.markdown("---")
+        st.subheader("📝 등록 신청")
+         
+        # 등록 신청서 입력
+        request_text = st.text_input(
+            "선생님 성함 혹은 학생의 학번+이름과 신청사유를 간단히 작성해 주세요.", 
+            placeholder="예: IBEC 관리 업무를 위해 시스템 접근 / 권한변경 필요합니다.",
+            help="""자료: admin, vvip, teacher ,ibec //
+                    공문목록: admin, teacher, ibec //
+                    상담일지: admin, teacher,ibec //
+                    IBEC: admin, ibec //
+                    권한변경 및 등록이 필요한 이유를 한 줄로 작성해주세요.""",
+            key="request_text_input"
+        )
+        
+        # 등록 신청 버튼
+        if st.button("등록신청", type="primary"):
+            if request_text.strip():
+                try:
+                    # 중복 신청 체크
+                    existing_requests = registration_ws.get_all_records()
+                    already_requested = any(row.get("email") == user_email for row in existing_requests)
+                    if already_requested:
+                        st.warning("⚠️ 이미 신청된 아이디입니다. 관리자 승인을 기다려주세요.")
+                    else:
+                        user_name = st.session_state["user"].get("name", "이름없음")
+                        success = save_registration_request(registration_ws, request_text, user_email, user_name)
+                        if success:
+                            st.success("✅ 등록 신청이 완료되었습니다. 관리자 승인을 기다려주세요.")
+                            st.info("💡 승인 후 다시 로그인해주세요.")
+                        else:
+                            st.error("❌ 등록 신청 중 오류가 발생했습니다.")
+                except Exception as e:
+                    st.error(f"❌ 등록 신청 중 오류가 발생했습니다: {str(e)}")
+            else:
+                st.warning("⚠️ 등록 신청 사유를 입력해주세요.")
+        
+        
         st.stop()
 
 # ------------------- 게시판/자료실 UI 및 권한별 접근 제어 -------------------
 
     # 관리자만 수정 UI 제공
-    if user_role == 'admin':
+    if user_role in ['admin', 'semiadmin']:
         st.subheader('게시판 목록')
         st.write('게시판 목록을 확인하고 권한을 설정할 수 있습니다.')
         for board in board_roles:
@@ -152,7 +155,7 @@ if "user" in st.session_state:
             save_board_roles(board_roles_ws, board_roles)
             st.success('권한 설정이 저장되었습니다.')
             st.rerun()
-    elif user_role == 'teacher' or user_role == 'ibec' or user_role == 'vvip':
+    elif user_role in ['teacher', 'ibec', 'vvip', 'student']:
         # Display board_roles in a styled format
         st.subheader('게시판 목록')
         html_content = """
@@ -193,3 +196,4 @@ if "user" in st.session_state:
         </table>
         """
         st.markdown(html_content, unsafe_allow_html=True)
+        
