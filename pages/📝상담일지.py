@@ -51,17 +51,28 @@ else:
 
     st.subheader("상담일지 수정")
     if not my_logs.empty:
-        selected_log = st.selectbox("수정할 상담일지를 선택하세요", my_logs.index, format_func=lambda x: my_logs.loc[x, "title"])
+        # 인덱스를 재설정하여 연속적인 숫자로 만들기
+        my_logs_reset = my_logs.reset_index(drop=True)
+        
+        # selectbox에서 연속적인 인덱스 사용
+        selected_index = st.selectbox(
+            "수정할 상담일지를 선택하세요", 
+            range(len(my_logs_reset)), 
+            format_func=lambda x: f"{my_logs_reset.loc[x, 'date']} - {my_logs_reset.loc[x, 'title']}"
+        )
+        
         with st.form("edit_counseling_form"):
-            selected_entry = my_logs.loc[selected_log]
+            selected_entry = my_logs_reset.loc[selected_index]
             edit_title = st.text_input("제목", value=selected_entry["title"])
             edit_content = st.text_area("상담 내용", value=selected_entry["content"])
             edit_date = st.date_input("상담일", value=datetime.datetime.strptime(selected_entry["date"], "%Y-%m-%d").date())
             edit_submitted = st.form_submit_button("수정 저장")
             if edit_submitted and edit_title and edit_content:
-                # Update the Google Sheet
-                row_index = selected_log + 2  # Adjust for header and 0-indexing
-                counseling_ws.update(f"A{row_index}", [[user_email, str(edit_date), edit_title, edit_content]])
+                # 원본 DataFrame에서 해당 행의 실제 위치 찾기
+                original_index = my_logs.index[selected_index]
+                # Google Sheet에서의 실제 행 번호 계산 (헤더 + 1-based indexing 고려)
+                sheet_row_index = original_index + 2
+                counseling_ws.update(f"A{sheet_row_index}", [[user_email, str(edit_date), edit_title, edit_content]])
                 st.success("상담일지가 수정되었습니다.")
                 st.rerun()
     else:
