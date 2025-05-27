@@ -5,6 +5,11 @@ from google.oauth2.service_account import Credentials
 import io
 import gspread
 import datetime
+import re
+import urllib.parse
+import tempfile
+from io import BytesIO
+import time
 
 # 구글 서비스 계정 인증
 SERVICE_ACCOUNT_INFO = st.secrets["google_service_account"]
@@ -45,19 +50,109 @@ else:
                 submit_post = st.form_submit_button("게시")
 
             if submit_post:
-                # Upload file to Google Drive
                 attachment_id = ""
                 if post_file is not None:
-                    # Determine the MIME type
-                    mime_type = post_file.type if post_file.type else 'application/octet-stream'
-                    file_metadata = {'name': post_file.name, 'parents': ['1CF5E6h5ZsXBG__0VB5v1Y54IRBdK3WgC']}
-                    file_stream = io.BytesIO(post_file.read())
-                    media = MediaIoBaseUpload(file_stream, mimetype=mime_type, resumable=True)
+                    # 디버깅 정보 추가
+                    st.write("--- 디버깅 정보 시작 ---")
+                    st.write(f"원본 파일명: {post_file.name}")
+                    st.write(f"Streamlit이 감지한 파일 타입: {post_file.type}")
+
+                    # 안전한 파일명 생성 (한글 문제 완전 해결)
+                    def create_safe_filename(original_name):
+                        # 파일명과 확장자 분리
+                        name_parts = original_name.rsplit('.', 1)
+                        if len(name_parts) == 2:
+                            filename, extension = name_parts
+                        else:
+                            filename = original_name
+                            extension = ""
+                        
+                        # 타임스탬프 생성 (고유성 보장)
+                        timestamp = int(time.time())
+                        
+                        # 한글이 포함된 경우 완전히 새로운 파일명 생성
+                        if re.search(r'[가-힣]', filename):
+                            # 한글 파일의 경우 타임스탬프 기반 파일명 사용
+                            safe_name = f"file_{timestamp}"
+                        else:
+                            # 영문 파일의 경우 안전한 문자만 유지
+                            safe_name = re.sub(r'[^a-zA-Z0-9\-_]', '_', filename)
+                            safe_name = re.sub(r'_+', '_', safe_name).strip('_')
+                            if not safe_name:
+                                safe_name = f"file_{timestamp}"
+                        
+                        # 파일명 길이 제한 (Google Drive 제한 고려)
+                        if len(safe_name) > 50:
+                            safe_name = safe_name[:50]
+                        
+                        # 최종 파일명 조합
+                        if extension:
+                            # 확장자도 안전하게 처리
+                            safe_extension = re.sub(r'[^a-zA-Z0-9]', '', extension.lower())
+                            return f"{safe_name}.{safe_extension}"
+                        else:
+                            return safe_name
+                    
+                    safe_filename = create_safe_filename(post_file.name)
+                    st.write(f"생성된 안전한 파일명: {safe_filename}")
+
+                    # 파일 메타데이터 생성 (ASCII 문자만 사용)
+                    file_metadata = {
+                        'name': safe_filename, 
+                        'parents': ['1CF5E6h5ZsXBG__0VB5v1Y54IRBdK3WgC']
+                    }
+                    st.write(f"파일 메타데이터: {file_metadata}")
+                    
+                    # 파일 콘텐츠를 메모리에서 읽기
                     try:
-                        file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+                        file_stream = BytesIO(post_file.getvalue())
+                        st.write(f"파일 크기: {len(post_file.getvalue())} bytes")
+                        
+                        # MIME 타입 안전하게 처리
+                        mime_type = post_file.type if post_file.type else 'application/octet-stream'
+                        st.write(f"MIME 타입: {mime_type}")
+                        
+                        media = MediaIoBaseUpload(file_stream, mimetype=mime_type)
+                        
+                        st.write("Google Drive에 파일 생성을 시도합니다...")
+                        
+                        # API 호출
+                        file = drive_service.files().create(
+                            body=file_metadata, 
+                            media_body=media, 
+                            fields='id, name'
+                        ).execute()
+                        
                         attachment_id = file.get('id')
+                        uploaded_name = file.get('name')
+                        
+                        st.write(f"파일 생성 성공! ID: {attachment_id}")
+                        st.write(f"업로드된 파일명: {uploaded_name}")
+                        st.success(f'✅ 파일이 성공적으로 업로드되었습니다!')
+                        st.info(f"원본: {post_file.name} → 저장됨: {uploaded_name}")
+                        
                     except Exception as e:
-                        st.error(f"파일 업로드 중 오류가 발생했습니다: {e}")
+                        error_message = f"파일 업로드 중 오류 발생: {str(e)}"
+                        
+                        # Google API 오류 상세 정보 추출
+                        if hasattr(e, 'content'):
+                            try:
+                                error_details = e.content.decode('utf-8')
+                                error_message += f"\nAPI 오류 상세: {error_details}"
+                            except Exception:
+                                pass
+                        
+                        # HTTP 오류 코드 확인
+                        if hasattr(e, 'resp') and hasattr(e.resp, 'status'):
+                            error_message += f"\nHTTP 상태 코드: {e.resp.status}"
+                        
+                        st.error(error_message)
+                        st.write("--- 디버깅 정보 끝 ---")
+                        st.stop()
+                        
+                    st.write("--- 디버깅 정보 끝 ---")
+                else:
+                    st.write("파일이 선택되지 않았습니다.")
 
                 # Append post to Google Sheet with current date
                 current_date = datetime.datetime.now().strftime("%Y-%m-%d")

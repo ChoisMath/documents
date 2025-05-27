@@ -12,3 +12,4 @@ pillow
 requests
 streamlit
 Authlib
+matplotlib
