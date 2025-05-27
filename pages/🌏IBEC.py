@@ -46,7 +46,7 @@ else:
             with st.form("ibec_post_form"):
                 post_text = st.text_area("글 내용")
                 post_url = st.text_input("URL (선택)")
-                post_file = st.file_uploader("파일 첨부 (선택)", type=["png", "jpg", "jpeg", "pdf", "docx", "xlsx"])
+                post_file = st.file_uploader("파일 첨부 (선택, 한글포함파일 업로드 불가)", type=["png", "jpg", "jpeg", "pdf", "docx", "xlsx"])
                 submit_post = st.form_submit_button("게시")
 
             if submit_post:
