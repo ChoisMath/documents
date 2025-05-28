@@ -4,6 +4,9 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime
+import pytz
+# 서울 타임존 객체
+seoul_tz = pytz.timezone("Asia/Seoul")
 
 st.set_page_config(layout="wide")
 st.title("Chois Playground")
@@ -59,7 +62,9 @@ def load_registration(sh):
     return ws
 
 def save_registration_request(ws, request_text, email, name):
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # 기본값을 서울 시간으로 설정
+    today_seoul = datetime.datetime.now(seoul_tz)
+    current_time = today_seoul.strftime("%Y-%m-%d %H:%M:%S")
     ws.append_row([request_text, email, name, current_time, "대기중"])
     return True
 

@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+import pytz
 
 # 구글 서비스 계정 인증 및 스프레드시트 열기 (app.py와 동일)
 SERVICE_ACCOUNT_INFO = st.secrets["google_service_account"]
@@ -22,6 +23,8 @@ if user_role not in counseling_allowed_roles:
     st.info("상담일지 기능은 허용된 사용자만 접근할 수 있습니다. 필요 및 오류 시 관리자(혁쌤, complete860127@gmail.com)에게 문의하세요.")
 else:
     import datetime
+    # 서울 타임존 객체
+    seoul_tz = pytz.timezone("Asia/Seoul")
     # 상담일지 시트 열기
     try:
         counseling_ws = sh.worksheet("CounselingLog")
@@ -32,7 +35,9 @@ else:
     with st.form("counseling_form"):
         title = st.text_input("새로운 상담일지 제목")
         content = st.text_area("상담 내용")
-        date = st.date_input("상담일", value=datetime.date.today())
+        # 기본값을 서울 시간으로 설정
+        today_seoul = datetime.datetime.now(seoul_tz).date()
+        date = st.date_input("상담일", value=today_seoul)
         submitted = st.form_submit_button("저장")
         if submitted and title and content:
             counseling_ws.append_row([user_email, str(date), title, content])
@@ -65,7 +70,11 @@ else:
             selected_entry = my_logs_reset.loc[selected_index]
             edit_title = st.text_input("제목", value=selected_entry["title"])
             edit_content = st.text_area("상담 내용", value=selected_entry["content"])
-            edit_date = st.date_input("상담일", value=datetime.datetime.strptime(selected_entry["date"], "%Y-%m-%d").date())
+            # 날짜 입력을 서울 시간 기준으로 변환
+            edit_date = st.date_input(
+                "상담일", 
+                value=datetime.datetime.strptime(selected_entry["date"], "%Y-%m-%d").date()
+            )
             edit_submitted = st.form_submit_button("수정 저장")
             if edit_submitted and edit_title and edit_content:
                 # 원본 DataFrame에서 해당 행의 실제 위치 찾기
