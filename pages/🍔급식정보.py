@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-st.header("🍔🍟🌭🍿🌯오늘의 급식🥨🥐🥫🥗🥙")
+st.header("🍔🍟오늘의 급식🌭🍿")
 
 # NEIS API 기본 정보
 API_KEY = st.secrets["neis"]["API_KEY"]

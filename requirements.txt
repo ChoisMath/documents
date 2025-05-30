@@ -12,3 +12,7 @@ pillow
 requests
 streamlit
 Authlib
+anthropic
+openai
+google
+google-generativeai

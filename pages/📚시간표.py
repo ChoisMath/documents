@@ -9,18 +9,13 @@ st.header("학교 시간표 조회 (NEIS)")
 API_KEY = st.secrets["neis"]["API_KEY"]
 ATPT_OFCDC_SC_CODE = "D10"  # 시도교육청코드 (예: 대구광역시교육청)
 
-# 날짜 및 학년 선택
-st.subheader("날짜 및 학년 및 학교 선택")
-
-col1, col2 = st.columns(2)
-
-with col1:
+# ---- 사이드바로 이동 ----
+with st.sidebar:
     # 날짜 선택
     selected_date = st.date_input("날짜 선택", value=datetime.now())
     selected_date_str = selected_date.strftime("%Y%m%d")
 
-# 학교 선택 (예시로 두 학교 추가)
-with col2:
+    # 학교 선택 (예시로 두 학교 추가)
     school_options = {
         "대구과학고등학교": "7240060",
         "경북여자고등학교": "7240055",
@@ -34,22 +29,22 @@ with col2:
         "서동중학교": "7281119",
         "포산중학교": "7281009",
         "경운중학교": "7261009"
-    }   
+    }
     selected_school = st.selectbox("학교 선택", options=list(school_options.keys()))
     selected_school_code = school_options[selected_school]
 
-# 학년 선택 및 API URL 설정
-if selected_school.endswith("초등학교"):
-    optinlist = [1, 2, 3, 4, 5, 6]
-    api_url = "https://open.neis.go.kr/hub/elsTimetable?"
-elif selected_school.endswith("중학교"):
-    optinlist = [1, 2, 3]
-    api_url = "https://open.neis.go.kr/hub/misTimetable?"
-else:
-    optinlist = [1, 2, 3]
-    api_url = "https://open.neis.go.kr/hub/hisTimetable?"
+    # 학년 선택 및 API URL 설정
+    if selected_school.endswith("초등학교"):
+        optinlist = [1, 2, 3, 4, 5, 6]
+        api_url = "https://open.neis.go.kr/hub/elsTimetable?"
+    elif selected_school.endswith("중학교"):
+        optinlist = [1, 2, 3]
+        api_url = "https://open.neis.go.kr/hub/misTimetable?"
+    else:
+        optinlist = [1, 2, 3]
+        api_url = "https://open.neis.go.kr/hub/hisTimetable?"
 
-selected_grade = st.selectbox("학년 선택", options=optinlist)
+    selected_grade = st.selectbox("학년 선택", options=optinlist)
 
 # API 요청 URL
 url = (

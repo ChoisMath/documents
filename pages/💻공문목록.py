@@ -32,18 +32,18 @@ if user_role not in doc_allowed_roles:
     st.info("권한이 없는 사용자입니다. 관리자(혁쌤, complete860127@gmail.com)에게 문의하세요.")
 else:
     st.write("오늘자 공문은 내일 새벽이 되어야 업데이트 되는것 같습니다. 하루전 까지의 데이터를 검색해 주세요.")
-    # Institution selection
-    selected_institution = st.selectbox(
-        "Select Institution",
-        options=[inst["name"] for inst in institutions]
-    )
-
-    # Find the selected institution code
-    selected_code = next(inst["code"] for inst in institutions if inst["name"] == selected_institution)
-
-    # Date selection
-    start_date = st.date_input("Start Date", datetime.now()-timedelta(weeks=1))
-    end_date = st.date_input("End Date", datetime.now()-timedelta(days=1))
+    # ---- 사이드바로 이동 ----
+    with st.sidebar:
+        # Institution selection
+        selected_institution = st.selectbox(
+            "Select Institution",
+            options=[inst["name"] for inst in institutions]
+        )
+        # Find the selected institution code
+        selected_code = next(inst["code"] for inst in institutions if inst["name"] == selected_institution)
+        # Date selection
+        start_date = st.date_input("Start Date", datetime.now()-timedelta(weeks=1))
+        end_date = st.date_input("End Date", datetime.now()-timedelta(days=1))
 
     # Fetch data
     url = "https://www.open.go.kr/othicInfo/infoList/orginlInfoList.ajax"
