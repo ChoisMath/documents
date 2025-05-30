@@ -16,3 +16,4 @@ anthropic
 openai
 google
 google-generativeai
+yt_dlp
