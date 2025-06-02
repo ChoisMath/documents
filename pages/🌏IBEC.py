@@ -168,13 +168,15 @@ else:
     for index, record in enumerate(reversed(ibec_records)):
         col1, col2 = st.columns([4, 1])
         with col1:
-            st.markdown(f"**작성자:** {record['User']}")
-            st.markdown(f"**작성일:** {record['Date']}")
-            st.info(f"**{record['Text']}**")
+            # 제목(글 내용) 먼저 크게
+            st.markdown(f"<div style='font-size:1.1em; font-weight:bold; margin-bottom:2px;'>{record['Text']}</div>", unsafe_allow_html=True)
+            # 작성자/작성일을 제목 아래에 작게, 회색으로
+            st.markdown(f"<div style='color:#888; font-size:0.9em; margin-bottom:6px;'>작성자: {record['User']} | 작성일: {record['Date']}</div>", unsafe_allow_html=True)
+            # URL 및 첨부파일
             if record['URL']:
-                st.markdown(f"[{record['URL']}]({record['URL']})")
+                st.markdown(f"<div style='margin-bottom:2px;'><a href='{record['URL']}' target='_blank'>{record['URL']}</a></div>", unsafe_allow_html=True)
             if record['Attachment ID']:
-                st.markdown(f"[첨부파일 다운로드](https://drive.google.com/uc?id={record['Attachment ID']})")
+                st.markdown(f"<div style='margin-bottom:2px;'><a href='https://drive.google.com/uc?id={record['Attachment ID']}' target='_blank'>[첨부파일 다운로드]</a></div>", unsafe_allow_html=True)
         
         with col2:
             # Add delete button for the author
