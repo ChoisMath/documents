@@ -336,15 +336,16 @@ else:
             return ""
     
     # 학생 정보로 기존 발달사항 조회하는 함수
-    def get_existing_development(grade, class_num, student_num):
+    def get_existing_development(grade, class_num, student_num, user_email):
         try:
             all_records = character_ws.get_all_records()
-            # 해당 학생의 기록만 필터링
+            # 해당 학생의 기록 중 입력자가 본인인 것만 필터링
             student_records = [
                 record for record in all_records
                 if record.get('학년') == grade and 
                    record.get('반') == class_num and 
-                   record.get('번호') == student_num
+                   record.get('번호') == student_num and 
+                   record.get('입력자') == user_email
             ]
             
             if student_records:
@@ -498,7 +499,7 @@ else:
                 st.session_state.student_name = ""
             
             # 발달사항 조회
-            existing_dev = get_existing_development(grade, class_num, student_num)
+            existing_dev = get_existing_development(grade, class_num, student_num, user_email)
             if existing_dev:
                 st.session_state.form_development_text = existing_dev
             else:
@@ -551,7 +552,7 @@ else:
     
     # 발달사항 입력 필드
     development = st.text_area(
-        "발달사항", 
+        "발달사항: AI가 생성한 내용을 수정할 수 있습니다.", 
         value=st.session_state.form_development_text if st.session_state.form_development_text else "기록된 내용이 없음",
         key="form_development_input",
         height=200
@@ -566,7 +567,7 @@ else:
                     st.session_state.student_name = student_name
                 
                 # 발달사항 다시 조회
-                existing_dev = get_existing_development(grade, class_num, student_num)
+                existing_dev = get_existing_development(grade, class_num, student_num, user_email)
                 if existing_dev:
                     st.session_state.form_development_text = existing_dev
                     st.info("기존 발달사항을 불러왔습니다.")
