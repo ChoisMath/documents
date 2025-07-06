@@ -1,0 +1,6 @@
+{
+  "enabledMcpjsonServers": [
+    "shared-server"
+  ],
+  "enableAllProjectMcpServers": true
+}
